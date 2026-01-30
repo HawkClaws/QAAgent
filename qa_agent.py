@@ -15,7 +15,7 @@ load_dotenv()
 
 # Map provider to model config
 # We keep simple map for default model names if not specified
-MODEL_MAPPING = {
+DEFAULT_MODELS = {
     "openai": "gpt-5.2",
     "anthropic": "claude-4.5-sonnet",
     "gemini": "gemini-3.0-pro",
@@ -128,7 +128,7 @@ def main():
     provider = args.provider or os.getenv("PROVIDER", "openai")
     model_name_arg = args.model or os.getenv("MODEL_NAME")
     
-    model_id = model_name_arg if model_name_arg else DEFAULT_MODELS.get(provider, "gpt-4o")
+    model_id = model_name_arg if model_name_arg else DEFAULT_MODELS.get(provider, "gpt-5.2")
     
     # Query might come from args or Env (for easier CI integration if needed)
     query = args.query
