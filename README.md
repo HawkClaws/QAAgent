@@ -13,6 +13,17 @@ It uses **Strands** for LLM orchestration and **Serena** for autonomous codebase
 
 ## Usage
 
+### 1. Interacting with the Agent
+Simply comment on any Issue or Pull Request with `/ask` followed by your question.
+
+**Examples:**
+- `/ask What does this PR change?`
+- `/ask Explain the directory structure of this repository.`
+- `/ask Where is the authentication logic implemented?`
+
+### 2. Workflow Setup
+
+
 Create a workflow file (e.g., `.github/workflows/qa.yml`):
 
 ```yaml
@@ -28,9 +39,16 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Checkout Pull Request (if applicable)
+        if: github.event.issue.pull_request
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Run QA Agent
         uses: HawkClaws/QAAgent@main

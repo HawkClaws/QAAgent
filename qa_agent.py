@@ -138,37 +138,42 @@ def main():
     # Query might come from args or Env (for easier CI integration if needed)
     query = args.query
     if not query:
-        print("Error: Query must be provided via --query argument.")
+        print("Error: Query must be provided via --query argument.", file=sys.stderr)
         sys.exit(1)
+
+    # Clean query (remove /ask trigger if present)
+    if query.strip().lower().startswith("/ask"):
+        query = query.strip()[4:].strip()
+        print(f"Cleaned query: {query}", file=sys.stderr)
     
-    print(f"Initializing QA Agent with model: {model_id} (Provider: {provider})")
+    print(f"Initializing QA Agent with model: {model_id} (Provider: {provider})", file=sys.stderr)
 
     # Instantiate the correct Model class
     # Strands defaults to BedrockModel if a string is passed, so we MUST instantiate the correct class.
     llm_model = None
     if provider == "openai":
          if not os.getenv("OPENAI_API_KEY"):
-             print("Error: OPENAI_API_KEY not found.")
+             print("Error: OPENAI_API_KEY not found.", file=sys.stderr)
              sys.exit(1)
          llm_model = OpenAIModel(model_id=model_id)
     elif provider == "anthropic":
          if not os.getenv("ANTHROPIC_API_KEY"):
-             print("Error: ANTHROPIC_API_KEY not found.")
+             print("Error: ANTHROPIC_API_KEY not found.", file=sys.stderr)
              sys.exit(1)
          llm_model = AnthropicModel(model_id=model_id)
     elif provider == "gemini":
          if not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
-              print("Error: GEMINI_API_KEY or GOOGLE_API_KEY not found.")
+              print("Error: GEMINI_API_KEY or GOOGLE_API_KEY not found.", file=sys.stderr)
               sys.exit(1)
          llm_model = GeminiModel(model_id=model_id)
     else:
-        print(f"Error: Unknown provider {provider}")
+        print(f"Error: Unknown provider {provider}", file=sys.stderr)
         sys.exit(1)
 
     # Load Serena tools
-    print("Loading Serena tools...")
+    print("Loading Serena tools...", file=sys.stderr)
     serena_tools = get_serena_tools()
-    print(f"Loaded {len(serena_tools)} tools from Serena.")
+    print(f"Loaded {len(serena_tools)} tools from Serena.", file=sys.stderr)
 
     # Initialize Agent
     agent = Agent(
@@ -187,17 +192,17 @@ def main():
         """
     )
 
-    print("Agent started. Processing query for provider:", provider)
+    print("Agent started. Processing query for provider:", provider, file=sys.stderr)
     try:
         # Agent is callable
         response = agent(query)
         
-        print("\n=== Agent Response ===")
+        print("\n=== Agent Response ===", file=sys.stderr)
         print(response)
-        print("======================")
+        print("======================", file=sys.stderr)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

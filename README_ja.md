@@ -13,6 +13,17 @@ LLMのオーケストレーションに **Strands** を、自律的なコード�
 
 ## 使い方
 
+### 1. エージェントへの質問
+Issue や Pull Request のコメントで `/ask` に続けて質問を投稿してください。
+
+**例:**
+- `/ask このPRの変更点を教えて`
+- `/ask このリポジトリのディレクトリ構成はどうなってる？`
+- `/ask 認証ロジックはどこに実装されていますか？`
+
+### 2. ワークフローの設定
+
+
 ワークフローファイル (例: `.github/workflows/qa.yml`) を作成します：
 
 ```yaml
@@ -28,9 +39,16 @@ jobs:
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Checkout Pull Request (if applicable)
+        if: github.event.issue.pull_request
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Run QA Agent
         uses: HawkClaws/QAAgent@main
