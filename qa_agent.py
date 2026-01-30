@@ -2,15 +2,18 @@ import os
 import sys
 import argparse
 import strands
+from dotenv import load_dotenv
 from strands import Agent
+from strands.models import OpenAIModel, AnthropicModel, GeminiModel
 from unittest.mock import MagicMock
 from serena.tools import ToolRegistry
 
-# Map provider names to expected model strings or configuration
-MODEL_MAPPING = {
-    "openai": "gpt-5.2",
-    "anthropic": "claude-4.5-sonnet",
-    "gemini": "gemini-3.0-pro",
+# Map provider to model config
+# We keep simple map for default model names if not specified
+DEFAULT_MODELS = {
+    "openai": "gpt-5.1",
+    "anthropic": "claude-3-5-sonnet-latest",
+    "gemini": "gemini-1.5-pro",
 }
 
 def get_serena_tools():
@@ -70,7 +73,7 @@ def get_serena_tools():
             
         except Exception as e:
             # Skip tools that fail to instantiate (e.g. might need complex dependencies)
-            print(f"Warning: Failed to load tool {tool_cls.__name__}: {e}")
+            # print(f"Warning: Failed to load tool {tool_cls.__name__}: {e}")
             continue
             
     return tools
@@ -78,7 +81,7 @@ def get_serena_tools():
 def main():
     parser = argparse.ArgumentParser(description="GitHub Repository QA Agent")
     parser.add_argument("--query", "-q", type=str, help="Question to ask the agent")
-    parser.add_argument("--provider", "-p", type=str, choices=MODEL_MAPPING.keys(), help="LLM Provider")
+    parser.add_argument("--provider", "-p", type=str, choices=DEFAULT_MODELS.keys(), help="LLM Provider")
     parser.add_argument("--model", "-m", type=str, help="Specific model name (overrides provider default)")
     
     args = parser.parse_args()
@@ -87,7 +90,7 @@ def main():
     provider = args.provider or os.getenv("PROVIDER", "openai")
     model_name_arg = args.model or os.getenv("MODEL_NAME")
     
-    model_name = model_name_arg if model_name_arg else MODEL_MAPPING.get(provider, "gpt-4o")
+    model_id = model_name_arg if model_name_arg else DEFAULT_MODELS.get(provider, "gpt-4o")
     
     # Query might come from args or Env (for easier CI integration if needed)
     query = args.query
@@ -95,18 +98,29 @@ def main():
         print("Error: Query must be provided via --query argument.")
         sys.exit(1)
     
-    print(f"Initializing QA Agent with model: {model_name} (Provider: {provider})")
+    print(f"Initializing QA Agent with model: {model_id} (Provider: {provider})")
 
-    # Ensure API keys are present
-    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
-        print("Error: OPENAI_API_KEY not found in environment variables.")
+    # Instantiate the correct Model class
+    # Strands defaults to BedrockModel if a string is passed, so we MUST instantiate the correct class.
+    llm_model = None
+    if provider == "openai":
+         if not os.getenv("OPENAI_API_KEY"):
+             print("Error: OPENAI_API_KEY not found.")
+             sys.exit(1)
+         llm_model = OpenAIModel(model_id=model_id)
+    elif provider == "anthropic":
+         if not os.getenv("ANTHROPIC_API_KEY"):
+             print("Error: ANTHROPIC_API_KEY not found.")
+             sys.exit(1)
+         llm_model = AnthropicModel(model_id=model_id)
+    elif provider == "gemini":
+         if not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
+              print("Error: GEMINI_API_KEY or GOOGLE_API_KEY not found.")
+              sys.exit(1)
+         llm_model = GeminiModel(model_id=model_id)
+    else:
+        print(f"Error: Unknown provider {provider}")
         sys.exit(1)
-    elif provider == "anthropic" and not os.getenv("ANTHROPIC_API_KEY"):
-        print("Error: ANTHROPIC_API_KEY not found in environment variables.")
-        sys.exit(1)
-    elif provider == "gemini" and not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
-         print("Error: GEMINI_API_KEY or GOOGLE_API_KEY not found.")
-         sys.exit(1)
 
     # Load Serena tools
     print("Loading Serena tools...")
@@ -115,7 +129,7 @@ def main():
 
     # Initialize Agent
     agent = Agent(
-        model=model_name,
+        model=llm_model,
         tools=serena_tools,
         system_prompt="""You are a helpful QA Agent for a software repository.
         Your goal is to answer the user's question by actively exploring the codebase.
