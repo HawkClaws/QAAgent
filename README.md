@@ -3,6 +3,8 @@
 AI-powered QA Agent for your GitHub repository.
 It uses **Strands** for LLM orchestration and **Serena** for autonomous codebase exploration.
 
+[日本語版はこちら (Japanese README)](README_ja.md)
+
 ## Features
 
 - **Autonomous Exploration**: actively explores your codebase (file search, read, git log) to answer questions.
