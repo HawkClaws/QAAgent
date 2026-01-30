@@ -5,74 +5,112 @@ import strands
 from dotenv import load_dotenv
 from strands import Agent
 from strands.models import OpenAIModel, AnthropicModel, GeminiModel
-from unittest.mock import MagicMock
-from serena.tools import ToolRegistry
+
+# Import specific tools directly to avoid loading IDE-dependent ones
+from serena.tools.file_tools import ListDirTool, ReadFileTool, FindFileTool, SearchForPatternTool
+from serena.tools.cmd_tools import ExecuteShellCommandTool
+
+# Load environment variables from .env
+load_dotenv()
 
 # Map provider to model config
 # We keep simple map for default model names if not specified
-DEFAULT_MODELS = {
-    "openai": "gpt-5.1",
-    "anthropic": "claude-3-5-sonnet-latest",
-    "gemini": "gemini-1.5-pro",
+MODEL_MAPPING = {
+    "openai": "gpt-5.2",
+    "anthropic": "claude-4.5-sonnet",
+    "gemini": "gemini-3.0-pro",
 }
 
+class SimpleProject:
+    def __init__(self, root: str):
+        self.project_root = os.path.abspath(root)
+
+    def validate_relative_path(self, relative_path: str):
+        # Basic validation to ensure path is within root
+        abs_path = os.path.abspath(os.path.join(self.project_root, relative_path))
+        if not abs_path.startswith(self.project_root):
+            raise ValueError(f"Path outside root: {relative_path}")
+
+    def relative_path_exists(self, relative_path: str) -> bool:
+        return os.path.exists(os.path.join(self.project_root, relative_path))
+
+    def is_ignored_path(self, path: str, ignore_non_source_files: bool = False) -> bool:
+        # Simple implementation: Don't ignore anything for now to allow full exploration
+        # Could add basic .git check if needed
+        return ".git" in str(path).split(os.path.sep)
+    
+    def read_file(self, relative_path: str) -> str:
+        with open(os.path.join(self.project_root, relative_path), 'r', encoding='utf-8', errors='replace') as f:
+            return f.read()
+
+class SimpleAgent:
+    def __init__(self, root: str):
+        self._project = SimpleProject(root)
+
+    def get_project_root(self) -> str:
+        return self._project.project_root
+
+    def get_active_project_or_raise(self):
+        return self._project
+    
+    def tool_is_active(self, tool_cls) -> bool:
+        return True
+        
+    def get_active_tool_names(self) -> list[str]:
+        return ["list_dir", "read_file", "find_file", "search_for_pattern", "execute_shell_command"]
+
+# ... imports
+from serena.tools import ToolRegistry
+
+# ... (keep SimpleProject/SimpleAgent)
+
 def get_serena_tools():
-    """Dynamically load and wrap all Serena tools for Strands."""
-    # Initialize a dummy agent for tool instantiation
-    _mock_agent = MagicMock()
-    _mock_agent.serena_config = MagicMock() 
+    """Dynamically load and wrap specific Serena tools for Strands."""
+    # Use current working directory as project root
+    cwd = os.getcwd()
+    agent_impl = SimpleAgent(cwd)
 
     registry = ToolRegistry()
     tools = []
     
-    # Instantiate all available tools
-    # Note: ToolRegistry.get_all_tool_classes() returns a list of tool classes
+    # helper to check if tool is safe
+    def is_safe_tool(tool_cls):
+        name = tool_cls.__name__
+        # JetBrains tools require IDE plugin connection
+        if "JetBrains" in name:
+            return False
+        # Skip abstract base classes if they somehow got into registry (unlikely but safe)
+        if name.startswith("Tool") and name.endswith("Marker"): 
+            return False
+        return True
+
     for tool_cls in registry.get_all_tool_classes():
+        if not is_safe_tool(tool_cls):
+            continue
+
         try:
-            # Instantiate tool with mock agent
-            tool_instance = tool_cls(_mock_agent)
+            # Instantiate tool with our SimpleAgent
+            tool_instance = tool_cls(agent_impl)
             
-            # The 'apply' method is the entry point for the tool
             func = tool_instance.apply
-            
-            # We need to wrap it to ensure strands picks up the correct name/doc
-            # Since strands.tool is a decorator, we can apply it to the bound method.
-            # However, we should ensure the name is descriptive (snake_case from serena).
             tool_name = tool_instance.get_name_from_cls()
             
-            # Apply strands.tool decorator
-            # strands.tool introspects the function. Bound methods work well with inspect.signature.
-            wrapped_tool = strands.tool(func)
-            
-            # Override name/doc if necessary, though strands might have already read them.
-            # Strands likely uses __name__ of the function.
-            # We might want to set __name__ of the bound method? You can't set __name__ of a bound method easily.
-            # But the 'wrapped_tool' returned by strands.tool serves as the tool definition.
-            # If strands uses the function name, it might be 'apply'. We MUST change the name.
-            
-            # Strands likely creates a tool definition. If it supports 'name' arg in decorator, we should use it.
-            # Previous inspection: strands.tool is a function. 
-            # If strands.tool doesn't take name args, we might need a wrapper function.
-            
+            # Create wrapper to maintain metadata
             def wrapper(*args, **kwargs):
                 return tool_instance.apply(*args, **kwargs)
             
-            # Copy metadata manually which logic libraries respect
             wrapper.__name__ = tool_name
             wrapper.__doc__ = tool_instance.apply.__doc__
-            # Attempt to copy signature for tool introspection (crucial for LLM)
             try:
                 import inspect
                 wrapper.__signature__ = inspect.signature(tool_instance.apply)
             except:
                 pass
 
-            # Now decorate
             final_tool = strands.tool(wrapper)
             tools.append(final_tool)
             
         except Exception as e:
-            # Skip tools that fail to instantiate (e.g. might need complex dependencies)
             # print(f"Warning: Failed to load tool {tool_cls.__name__}: {e}")
             continue
             
