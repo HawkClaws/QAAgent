@@ -45,7 +45,7 @@ jobs:
           
           # Run the agent
           # Capture output to a file to post as comment later
-          python qa_agent.py --query "$QUERY" > answer.txt 2>&1
+          python qa_agent.py --query "$QUERY" > answer.txt 2>&1 || true
           
       - name: Post comment
         uses: actions/github-script@v7
