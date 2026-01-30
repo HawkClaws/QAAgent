@@ -96,8 +96,13 @@ def get_serena_tools():
             tool_name = tool_instance.get_name_from_cls()
             
             # Create wrapper to maintain metadata
-            def wrapper(*args, **kwargs):
-                return tool_instance.apply(*args, **kwargs)
+            # Use a factory to capture tool_instance correctly in closure
+            def create_wrapper(instance):
+                def wrapper(*args, **kwargs):
+                    return instance.apply(*args, **kwargs)
+                return wrapper
+
+            wrapper = create_wrapper(tool_instance)
             
             wrapper.__name__ = tool_name
             wrapper.__doc__ = tool_instance.apply.__doc__
