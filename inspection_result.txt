@@ -1,0 +1,18 @@
+Strands package location: /home/t-t/Sources/personal/GAAgent/.venv/lib/python3.12/site-packages/strands/__init__.py
+Strands module contents: ['Agent', 'AgentBase', 'ModelRetryStrategy', 'ToolContext', '__all__', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__spec__', '_async', '_exception_notes', '_identifier', 'agent', 'event_loop', 'experimental', 'handlers', 'hooks', 'interrupt', 'models', 'session', 'telemetry', 'tool', 'tools', 'types']
+
+Found 'Agent' class in strands top-level.
+Agent class help:
+Core Agent implementation.
+
+An agent orchestrates the following workflow:
+
+1. Receives user input
+2. Processes the input using a language model
+3. Decides whether to use tools to gather information or perform actions
+4. Executes those tools and receives results
+5. Continues reasoning with the new information
+6. Produces a final response
+
+Agent class __init__ signature:
+(self, model: strands.models.model.Model | str | None = None, messages: list[strands.types.content.Message] | None = None, tools: list[typing.Union[str, dict[str, str], ForwardRef('ToolProvider'), typing.Any]] | None = None, system_prompt: str | list[strands.types.content.SystemContentBlock] | None = None, structured_output_model: type[pydantic.main.BaseModel] | None = None, callback_handler: collections.abc.Callable[..., typing.Any] | strands.agent.agent._DefaultCallbackHandlerSentinel | None = <strands.agent.agent._DefaultCallbackHandlerSentinel object at 0x72b8571da3f0>, conversation_manager: strands.agent.conversation_manager.conversation_manager.ConversationManager | None = None, record_direct_tool_call: bool = True, load_tools_from_directory: bool = False, trace_attributes: collections.abc.Mapping[str, str | bool | float | int | list[str] | list[bool] | list[float] | list[int] | collections.abc.Sequence[str] | collections.abc.Sequence[bool] | collections.abc.Sequence[int] | collections.abc.Sequence[float]] | None = None, *, agent_id: str | None = None, name: str | None = None, description: str | None = None, state: strands.types.json_dict.JSONSerializableDict | dict | None = None, hooks: list[strands.hooks.registry.HookProvider] | None = None, session_manager: strands.session.session_manager.SessionManager | None = None, tool_executor: strands.tools.executors._executor.ToolExecutor | None = None, retry_strategy: strands.event_loop._retry.ModelRetryStrategy | None = None)
