@@ -22,11 +22,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "strands-agents[openai,anthropic,gemini]" serena-agent
+          pip install -r requirements.txt
 
       - name: Run QA Agent
         env:
