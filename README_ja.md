@@ -86,3 +86,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY="..."
 python qa_agent.py --query "このリポジトリについて説明して"
 ```
+
+## ライセンス
+
+このプロジェクトは Apache License 2.0 の下でライセンスされています。詳細は [LICENSE](LICENSE) ファイルを参照してください。
